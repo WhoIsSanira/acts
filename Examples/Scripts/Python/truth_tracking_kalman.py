@@ -183,11 +183,11 @@ if "__main__" == __name__:
 
     import argparse
 
-    p = argparse.ArgumentParser()
+    # p = argparse.ArgumentParser()
     choices = ["mu", "pi", "p", "kaon"]
-    p.add_argument("--ptcl", choices=choices)
-    p.add_argument("--hypo", choices=choices)
-    args = p.parse_args()
+    # p.add_argument("--ptcl", choices=choices)
+    # p.add_argument("--hypo", choices=choices)
+    # args = p.parse_args()
 
     srcdir = Path(__file__).resolve().parent.parent.parent.parent
 
@@ -218,39 +218,45 @@ if "__main__" == __name__:
 
     field = acts.ConstantBField(acts.Vector3(0, 0, 2 * u.T))
 
-    s = acts.examples.Sequencer(events=10000, numThreads=-1, logLevel=acts.logging.INFO)
 
-    if args.ptcl == "mu":
-        ptcl_truth = acts.PdgParticle.eMuon
-    elif args.ptcl == "pi":
-        ptcl_truth = acts.PdgParticle.ePionMinus
-    elif args.ptcl == "p":
-        ptcl_truth = acts.PdgParticle.eProton
-    elif args.ptcl == "kaon":
-        ptcl_truth = acts.PdgParticle.eKaonMinus
-    else:
-        raise ValueError(f"Unknown particle type: {args.ptcl}")
+    for ptcl in choices:
+        for hypo in choices:
+            print(ptcl, hypo)
 
-    if args.hypo == "mu":
-        hypo = acts.ParticleHypothesis.muon
-    elif args.hypo == "pi":
-        hypo = acts.ParticleHypothesis.pion
-    elif args.hypo == "p":
-        hypo = acts.ParticleHypothesis.proton
-    elif args.hypo == "kaon":
-        hypo = acts.ParticleHypothesis.kaon
-    else:
-        raise ValueError(f"Unknown hypothesis: {args.hypo}")
+            s = acts.examples.Sequencer(events=10000, numThreads=-1, logLevel=acts.logging.INFO)
+            
+            if ptcl == "mu":
+                ptcl_truth = acts.PdgParticle.eMuon
+            elif ptcl == "pi":
+                ptcl_truth = acts.PdgParticle.ePionMinus
+            elif ptcl == "p":
+                ptcl_truth = acts.PdgParticle.eProton
+            elif ptcl == "kaon":
+                ptcl_truth = acts.PdgParticle.eKaonMinus
+            else:
+                raise ValueError(f"Unknown particle type: {ptcl}")
 
-    summary = f"tracksummary_kf_h_{args.hypo}_t_{args.ptcl}.root"
+            if hypo == "mu":
+                hypo2 = acts.ParticleHypothesis.muon
+            elif hypo == "pi":
+                hypo2 = acts.ParticleHypothesis.pion
+            elif hypo == "p":
+                hypo2 = acts.ParticleHypothesis.proton
+            elif hypo == "kaon":
+                hypo2 = acts.ParticleHypothesis.kaon
+            else:
+                raise ValueError(f"Unknown hypothesis: {hypo}")
 
-    runTruthTrackingKalman(
-        trackingGeometry=trackingGeometry,
-        field=field,
-        digiConfigFile=oddDigiConfig,
-        outputDir=Path.cwd(),
-        ptcl_truth=ptcl_truth,
-        hypo=hypo,
-        summary=summary,
-        s=s,
-    ).run()
+            summary = f"tracksummary_kf_h_{hypo}_t_{ptcl}.root"
+            print(summary)
+
+            runTruthTrackingKalman(
+                trackingGeometry=trackingGeometry,
+                field=field,
+                digiConfigFile=oddDigiConfig,
+                outputDir=Path.cwd(),
+                ptcl_truth=ptcl_truth,
+                hypo=hypo2,
+                summary=summary,
+                s=s
+            ).run()
