@@ -302,6 +302,8 @@ def addSeeding(
     outputDirCsv: Optional[Union[Path, str]] = None,
     logLevel: Optional[acts.logging.Level] = None,
     rnd: Optional[acts.examples.RandomNumbers] = None,
+    trackParameterSmearingOutputTrackParameters: str = "",
+    particle: str = ""
 ) -> None:
     """This function steers the seeding
     Parameters
@@ -363,6 +365,8 @@ def addSeeding(
     # finding and track parameters estimation
     if seedingAlgorithm == SeedingAlgorithm.TruthSmeared:
         logger.info("Using smeared truth particles for seeding")
+        print(f"{trackParameterSmearingOutputTrackParameters=}")
+        print(f"{particle=}")
         addTruthSmearedSeeding(
             s=s,
             rnd=rnd,
@@ -374,6 +378,8 @@ def addSeeding(
             initialVarInflation=initialVarInflation,
             particleHypothesis=particleHypothesis,
             logLevel=logLevel,
+            trackParameterSmearingOutputTrackParameters=trackParameterSmearingOutputTrackParameters,
+            particle=particle
         )
     else:
         spacePoints = addSpacePointsMaking(
@@ -388,6 +394,7 @@ def addSeeding(
                 selectedParticles,
                 truthEstimatedSeedingAlgorithmConfigArg,
                 logLevel,
+                particle
             )
         elif seedingAlgorithm == SeedingAlgorithm.Default:
             logger.info("Using default seeding")
@@ -453,7 +460,7 @@ def addSeeding(
         parEstimateAlg = acts.examples.TrackParamsEstimationAlgorithm(
             level=logLevel,
             inputSeeds=seeds,
-            outputTrackParameters="estimatedparameters",
+            outputTrackParameters=f"estimatedparameters_{particle}",
             outputSeeds="estimatedseeds",
             trackingGeometry=trackingGeometry,
             magneticField=field,
@@ -476,12 +483,12 @@ def addSeeding(
             )
         )
 
-        tracks = "seed-tracks"
+        tracks = f"seed-tracks_{particle}"
         s.addAlgorithm(
             acts.examples.PrototracksToTracks(
                 level=logLevel,
                 inputProtoTracks=prototracks,
-                inputTrackParameters="estimatedparameters",
+                inputTrackParameters=f"estimatedparameters_{particle}",
                 inputMeasurements="measurements",
                 outputTracks=tracks,
             )
@@ -553,6 +560,8 @@ def addTruthSmearedSeeding(
     initialVarInflation: Optional[List[float]],
     particleHypothesis: Optional[acts.ParticleHypothesis],
     logLevel: acts.logging.Level = None,
+    trackParameterSmearingOutputTrackParameters: str = "",
+    particle: str = ""
 ):
     """adds algorithm that would mimic detector response uncertainties for truth seeding
     For parameters description see addSeeding
@@ -563,15 +572,16 @@ def addTruthSmearedSeeding(
     trkParamExtractor = acts.examples.ParticleTrackParamExtractor(
         level=logLevel,
         inputParticles=selectedParticles,
-        outputTrackParameters="trueparameters",
+        outputTrackParameters=trackParameterSmearingOutputTrackParameters,
     )
     s.addAlgorithm(trkParamExtractor)
 
     # Smearing track parameters
+    print(f"{particle=}")
     trkSmear = acts.examples.TrackParameterSmearing(
         level=logLevel,
         inputTrackParameters=trkParamExtractor.config.outputTrackParameters,
-        outputTrackParameters="estimatedparameters",
+        outputTrackParameters=f"estimatedparameters_{particle}",
         randomNumbers=rnd,
         # gaussian sigmas to smear particle parameters
         **acts.examples.defaultKWArgs(
@@ -598,7 +608,7 @@ def addTruthSmearedSeeding(
         level=logLevel,
         inputParticles=selectedParticles,
         inputParticleMeasurementsMap="particle_measurements_map",
-        outputProtoTracks="truth_particle_tracks",
+        outputProtoTracks=f"truth_particle_tracks_{particle}",
     )
     s.addAlgorithm(truthTrkFndAlg)
 
@@ -609,6 +619,7 @@ def addTruthEstimatedSeeding(
     inputParticles: str,
     TruthEstimatedSeedingAlgorithmConfigArg: TruthEstimatedSeedingAlgorithmConfigArg,
     logLevel: acts.logging.Level = None,
+    particle: str = ""
 ):
     """adds truth seeding
     For parameters description see addSeeding
@@ -621,7 +632,7 @@ def addTruthEstimatedSeeding(
         inputParticleMeasurementsMap="particle_measurements_map",
         inputSpacePoints=[spacePoints],
         outputParticles="truth_seeded_particles",
-        outputProtoTracks="truth_particle_tracks",
+        outputProtoTracks=f"truth_particle_tracks_{particle}",
         outputSeeds="seeds",
         **acts.examples.defaultKWArgs(
             deltaRMin=TruthEstimatedSeedingAlgorithmConfigArg.deltaR[0],
@@ -1218,20 +1229,21 @@ def addSeedFilterML(
     logLevel: Optional[acts.logging.Level] = None,
     outputDirRoot: Optional[Union[Path, str]] = None,
     outputDirCsv: Optional[Union[Path, str]] = None,
+    particle: str = ""
 ) -> None:
     customLogLevel = acts.examples.defaultLogging(s, logLevel)()
     from acts.examples.onnx import SeedFilterMLAlgorithm
 
     inputParticles = "particles"
-    selectedParticles = "particles_selected"
+    selectedParticles = f"particles_selected_{particle}"
     seeds = "seeds"
-    estParams = "estimatedparameters"
+    estParams = f"estimatedparameters_{particle}"
     prototracks = "seed-prototracks-ML"
     tracks = "seed-tracks-ML"
 
     filterML = SeedFilterMLAlgorithm(
         level=customLogLevel,
-        inputTrackParameters="estimatedparameters",
+        inputTrackParameters=f"estimatedparameters_{particle}",
         inputSimSeeds="seeds",
         inputSeedFilterNN=onnxModelFile,
         outputTrackParameters="filtered-parameters",
@@ -1244,7 +1256,7 @@ def addSeedFilterML(
     )
     s.addAlgorithm(filterML)
     s.addWhiteboardAlias(seeds, "filtered-seeds")
-    s.addWhiteboardAlias("estimatedparameters", "filtered-parameters")
+    s.addWhiteboardAlias(f"estimatedparameters_{particle}", "filtered-parameters")
 
     s.addAlgorithm(
         acts.examples.SeedsToPrototracks(
@@ -1258,7 +1270,7 @@ def addSeedFilterML(
         acts.examples.PrototracksToTracks(
             level=customLogLevel,
             inputProtoTracks=prototracks,
-            inputTrackParameters="estimatedparameters",
+            inputTrackParameters=f"estimatedparameters_{particle}",
             outputTracks=tracks,
         )
     )
@@ -1313,12 +1325,14 @@ def addKalmanTracks(
     trackingGeometry: acts.TrackingGeometry,
     field: acts.MagneticFieldProvider,
     reverseFilteringMomThreshold: float = 0 * u.GeV,
+    inputInitialTrackParameters: str = "estimatedparameters",
     inputProtoTracks: str = "truth_particle_tracks",
     multipleScattering: bool = True,
     energyLoss: bool = True,
     clusters: str = None,
     calibrator: acts.examples.MeasurementCalibrator = acts.examples.makePassThroughCalibrator(),
     logLevel: Optional[acts.logging.Level] = None,
+    particle: str = "" 
 ) -> None:
     customLogLevel = acts.examples.defaultLogging(s, logLevel)
 
@@ -1331,13 +1345,15 @@ def addKalmanTracks(
         "chi2Cut": float("inf"),
     }
 
+    outputTracks = f"tracks_{particle}"
+
     fitAlg = acts.examples.TrackFittingAlgorithm(
         level=customLogLevel(),
         inputMeasurements="measurements",
         inputProtoTracks=inputProtoTracks,
-        inputInitialTrackParameters="estimatedparameters",
+        inputInitialTrackParameters=inputInitialTrackParameters,
         inputClusters=clusters if clusters is not None else "",
-        outputTracks="kf_tracks",
+        outputTracks=outputTracks,
         pickTrack=-1,
         fit=acts.examples.makeKalmanFitterFunction(
             trackingGeometry, field, **kalmanOptions
@@ -1345,26 +1361,27 @@ def addKalmanTracks(
         calibrator=calibrator,
     )
     s.addAlgorithm(fitAlg)
-    s.addWhiteboardAlias("tracks", fitAlg.config.outputTracks)
+    s.addWhiteboardAlias(f"tracks_{particle}", fitAlg.config.outputTracks)
 
     matchAlg = acts.examples.TrackTruthMatcher(
         level=customLogLevel(),
         inputTracks=fitAlg.config.outputTracks,
         inputParticles="particles",
         inputMeasurementParticlesMap="measurement_particles_map",
-        outputTrackParticleMatching="kf_track_particle_matching",
-        outputParticleTrackMatching="kf_particle_track_matching",
+        outputTrackParticleMatching=f"track_particle_matching_{particle}",
+        outputParticleTrackMatching=f"particle_track_matching_{particle}",
         doubleMatching=True,
     )
     s.addAlgorithm(matchAlg)
     s.addWhiteboardAlias(
-        "track_particle_matching", matchAlg.config.outputTrackParticleMatching
+        f"track_particle_matching_{particle}", matchAlg.config.outputTrackParticleMatching
     )
     s.addWhiteboardAlias(
-        "particle_track_matching", matchAlg.config.outputParticleTrackMatching
+        f"particle_track_matching_{particle}", matchAlg.config.outputParticleTrackMatching
     )
 
     return s
+
 
 
 def addTruthTrackingGsf(
@@ -1373,6 +1390,7 @@ def addTruthTrackingGsf(
     field: acts.MagneticFieldProvider,
     inputProtoTracks: str = "truth_particle_tracks",
     logLevel: Optional[acts.logging.Level] = None,
+    particle: str = ""
 ) -> None:
     customLogLevel = acts.examples.defaultLogging(s, logLevel)
 
@@ -1394,7 +1412,7 @@ def addTruthTrackingGsf(
         level=customLogLevel(),
         inputMeasurements="measurements",
         inputProtoTracks=inputProtoTracks,
-        inputInitialTrackParameters="estimatedparameters",
+        inputInitialTrackParameters=f"estimatedparameters_{particle}",
         outputTracks="gsf_tracks",
         pickTrack=-1,
         fit=acts.examples.makeGsfFitterFunction(trackingGeometry, field, **gsfOptions),
@@ -1444,6 +1462,7 @@ def addCKFTracks(
     writePerformance: bool = True,
     writeCovMat=False,
     logLevel: Optional[acts.logging.Level] = None,
+    particle: str = ""
 ) -> None:
     """This function steers the seeding
 
@@ -1523,7 +1542,7 @@ def addCKFTracks(
             ]
         ),
         inputMeasurements="measurements",
-        inputInitialTrackParameters="estimatedparameters",
+        inputInitialTrackParameters=f"estimatedparameters_{particle}",
         inputSeeds=(
             "estimatedseeds"
             if ckfConfig.seedDeduplication or ckfConfig.stayOnSeed
@@ -1557,7 +1576,7 @@ def addCKFTracks(
     matchAlg = acts.examples.TrackTruthMatcher(
         level=customLogLevel(),
         inputTracks=trackFinder.config.outputTracks,
-        inputParticles="particles_selected",
+        inputParticles=f"particles_selected_{particle}",
         inputMeasurementParticlesMap="measurement_particles_map",
         outputTrackParticleMatching="ckf_track_particle_matching",
         outputParticleTrackMatching="ckf_particle_track_matching",
@@ -1600,6 +1619,7 @@ def addGx2fTracks(
     clusters: str = None,
     calibrator: acts.examples.MeasurementCalibrator = acts.examples.makePassThroughCalibrator(),
     logLevel: Optional[acts.logging.Level] = None,
+    particle: str = ""
 ) -> None:
     customLogLevel = acts.examples.defaultLogging(s, logLevel)
 
@@ -1616,7 +1636,7 @@ def addGx2fTracks(
         level=customLogLevel(),
         inputMeasurements="measurements",
         inputProtoTracks=inputProtoTracks,
-        inputInitialTrackParameters="estimatedparameters",
+        inputInitialTrackParameters=f"estimatedparameters_{particle}",
         inputClusters=clusters if clusters is not None else "",
         outputTracks="gx2f_tracks",
         pickTrack=-1,
@@ -1626,7 +1646,7 @@ def addGx2fTracks(
         calibrator=calibrator,
     )
     s.addAlgorithm(fitAlg)
-    s.addWhiteboardAlias("tracks", fitAlg.config.outputTracks)
+    s.addWhiteboardAlias(f"tracks_{particle}", fitAlg.config.outputTracks)
 
     matchAlg = acts.examples.TrackTruthMatcher(
         level=customLogLevel(),
@@ -1660,6 +1680,7 @@ def addTrackWriters(
     writeFinderPerformance: bool = False,
     logLevel: Optional[acts.logging.Level] = None,
     writeCovMat=False,
+    particle: str = ""
 ):
     customLogLevel = acts.examples.defaultLogging(s, logLevel)
 
@@ -1672,8 +1693,8 @@ def addTrackWriters(
             trackSummaryWriter = acts.examples.RootTrackSummaryWriter(
                 level=customLogLevel(),
                 inputTracks=tracks,
-                inputParticles="particles_selected",
-                inputTrackParticleMatching="track_particle_matching",
+                inputParticles=f"particles_selected_{particle}",
+                inputTrackParticleMatching=f"track_particle_matching_{particle}",
                 filePath=str(outputDirRoot / f"tracksummary_{name}.root"),
                 treeName="tracksummary",
                 writeCovMat=writeCovMat,
@@ -1684,7 +1705,7 @@ def addTrackWriters(
             trackStatesWriter = acts.examples.RootTrackStatesWriter(
                 level=customLogLevel(),
                 inputTracks=tracks,
-                inputParticles="particles_selected",
+                inputParticles=f"particles_selected_{particle}",
                 inputTrackParticleMatching="track_particle_matching",
                 inputSimHits="simhits",
                 inputMeasurementSimHitsMap="measurement_simhits_map",
@@ -1697,7 +1718,7 @@ def addTrackWriters(
             trackFitterPerformanceWriter = acts.examples.TrackFitterPerformanceWriter(
                 level=customLogLevel(),
                 inputTracks=tracks,
-                inputParticles="particles_selected",
+                inputParticles=f"particles_selected_{particle}",
                 inputTrackParticleMatching="track_particle_matching",
                 filePath=str(outputDirRoot / f"performance_fitting_{name}.root"),
             )
@@ -1707,7 +1728,7 @@ def addTrackWriters(
             trackFinderPerfWriter = acts.examples.TrackFinderPerformanceWriter(
                 level=customLogLevel(),
                 inputTracks=tracks,
-                inputParticles="particles_selected",
+                inputParticles=f"particles_selected_{particle}",
                 inputTrackParticleMatching="track_particle_matching",
                 inputParticleTrackMatching="particle_track_matching",
                 inputParticleMeasurementsMap="particle_measurements_map",
@@ -2121,6 +2142,7 @@ def addVertexFitting(
     writeTrackInfo: bool = False,
     outputDirRoot: Optional[Union[Path, str]] = None,
     logLevel: Optional[acts.logging.Level] = None,
+    particle: str = ""
 ) -> None:
     """This function steers the vertex fitting
 
@@ -2179,7 +2201,7 @@ def addVertexFitting(
 
     tracks = tracks if tracks is not None else ""
     inputParticles = "particles"
-    selectedParticles = "particles_selected"
+    selectedParticles = f"particles_selected_{particle}"
     inputTruthVertices = "vertices_truth"
 
     if vertexFinder == VertexFinder.Truth:
@@ -2259,6 +2281,7 @@ def addHoughVertexFinding(
     logLevel: Optional[acts.logging.Level] = None,
     inputSpacePoints: Optional[str] = "spacepoints",
     outputVertices: Optional[str] = "fittedHoughVertices",
+    particle: str = ""
 ) -> None:
     from acts.examples import (
         HoughVertexFinderAlgorithm,
@@ -2275,7 +2298,7 @@ def addHoughVertexFinding(
     s.addAlgorithm(findHoughVertex)
 
     inputParticles = "particles"
-    selectedParticles = "particles_selected"
+    selectedParticles = f"particles_selected_{particle}"
     inputTruthVertices = "vertices_truth"
 
     if outputDirRoot is not None:

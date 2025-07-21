@@ -1,0 +1,248 @@
+#!/usr/bin/env python3
+
+from pathlib import Path
+from typing import Optional
+
+import acts
+import acts.examples
+
+u = acts.UnitConstants
+
+
+def runTruthTrackingKalman(
+    trackingGeometry: acts.TrackingGeometry,
+    field: acts.MagneticFieldProvider,
+    digiConfigFile: Path,
+    outputDir: Path,
+    inputParticlePath: Optional[Path] = None,
+    inputHitsPath: Optional[Path] = None,
+    decorators=[],
+    reverseFilteringMomThreshold=0 * u.GeV,
+    s: acts.examples.Sequencer = None,
+):
+    from acts.examples.simulation import (
+        addParticleGun,
+        ParticleConfig,
+        EtaConfig,
+        PhiConfig,
+        MomentumConfig,
+        addFatras,
+        addDigitization,
+        ParticleSelectorConfig,
+        addDigiParticleSelection,
+    )
+    from acts.examples.reconstruction import (
+        addSeeding,
+        SeedingAlgorithm,
+        addKalmanTracks,
+    )
+
+    s = s or acts.examples.Sequencer(
+        events=100, numThreads=-1, logLevel=acts.logging.INFO
+    )
+
+    for d in decorators:
+        s.addContextDecorator(d)
+
+    rnd = acts.examples.RandomNumbers(seed=42)
+    outputDir = Path(outputDir)
+
+    logger = acts.logging.getLogger("Truth tracking example")
+    ptcl_truth = acts.PdgParticle.ePionMinus
+        
+    if inputParticlePath is None:
+        addParticleGun(
+            s,
+            ParticleConfig(num=1, pdg=ptcl_truth, randomizeCharge=True),
+            EtaConfig(-3.0, 3.0, uniform=True),
+            MomentumConfig(1.0 * u.GeV, 1.0 * u.GeV, transverse=True),
+            PhiConfig(0.0, 360.0 * u.degree),
+            vtxGen=acts.examples.GaussianVertexGenerator(
+                mean=acts.Vector4(0, 0, 0, 0),
+                stddev=acts.Vector4(0, 0, 0, 0),
+            ),
+            multiplicity=1,
+            rnd=rnd,
+        )
+    else:
+        logger.info("Reading particles from %s", inputParticlePath.resolve())
+        assert inputParticlePath.exists()
+        s.addReader(
+            acts.examples.RootParticleReader(
+                level=acts.logging.INFO,
+                filePath=str(inputParticlePath.resolve()),
+                outputParticles=f"particles_generated_{truth}",
+            )
+        )
+        s.addWhiteboardAlias("particles", f"particles_generated_{truth}")
+
+    if inputHitsPath is None:
+        addFatras(
+            s,
+            trackingGeometry,
+            field,
+            rnd=rnd,
+            enableInteractions=True,
+        )
+    else:
+        logger.info("Reading hits from %s", inputHitsPath.resolve())
+        assert inputHitsPath.exists()
+        s.addReader(
+            acts.examples.RootSimHitReader(
+                level=acts.logging.INFO,
+                filePath=str(inputHitsPath.resolve()),
+                outputSimHits="simhits",
+            )
+        )
+
+    addDigitization(
+        s,
+        trackingGeometry,
+        field,
+        digiConfigFile=digiConfigFile,
+        rnd=rnd,
+    )
+
+    addDigiParticleSelection(
+        s,
+        ParticleSelectorConfig(
+            pt=(0.9 * u.GeV, None),
+            measurements=(7, None),
+            removeNeutral=True,
+            removeSecondaries=True,
+        ),
+    )
+
+    choices = ["kaon", "pi", "p"]
+
+    
+
+    for particle in choices:
+        if particle == "pi":
+            hypo = acts.ParticleHypothesis.pion
+        elif particle == "p":
+            hypo = acts.ParticleHypothesis.proton
+        elif particle == "kaon":
+            hypo = acts.ParticleHypothesis.kaon
+        else:
+            raise ValueError(f"Unknown hypothesis: {particle}")
+
+        
+        addSeeding(
+            s,
+            trackingGeometry,
+            field,
+            rnd=rnd,
+            inputParticles="particles_generated",
+            seedingAlgorithm=SeedingAlgorithm.TruthSmeared,
+            particleHypothesis=hypo,
+            trackParameterSmearingOutputTrackParameters=f"output_track_parameter_{particle}",
+            particle=particle
+        )
+
+        addKalmanTracks(
+            s,
+            trackingGeometry,
+            field,
+            reverseFilteringMomThreshold,
+            particle=particle,
+            inputInitialTrackParameters = f"estimatedparameters_{particle}",
+            inputProtoTracks = f"truth_particle_tracks_{particle}"
+            
+        )
+
+        s.addAlgorithm(
+            acts.examples.TrackSelectorAlgorithm(
+                level=acts.logging.INFO,
+                inputTracks=f"tracks_{particle}",
+                outputTracks=f"selected-tracks_{particle}",
+                selectorConfig=acts.TrackSelector.Config(
+                    minMeasurements=7,
+                ),
+            )
+        )
+        s.addWhiteboardAlias(f"tracks_{particle}", f"selected-tracks_{particle}")
+
+        # s.addWriter(
+        #     acts.examples.RootTrackStatesWriter(
+        #         level=acts.logging.INFO,
+        #         inputTracks="tracks",
+        #         inputParticles="particles_selected",
+        #         inputTrackParticleMatching="track_particle_matching",
+        #         inputSimHits="simhits",
+        #         inputMeasurementSimHitsMap="measurement_simhits_map",
+        #         filePath=str(outputDir / "trackstates_kf.root"),
+        #     )
+        # )
+
+        summary=f"tracksummary_kf_{particle}.root"
+
+        s.addWriter(
+            acts.examples.RootTrackSummaryWriter(
+                level=acts.logging.INFO,
+                inputTracks=f"tracks_{particle}",
+                inputParticles="particles_selected",
+                inputTrackParticleMatching=f"track_particle_matching_{particle}",
+                filePath=str(outputDir / summary),
+            )
+        )
+
+    # s.addWriter(
+    #     acts.examples.TrackFitterPerformanceWriter(
+    #         level=acts.logging.INFO,
+    #         inputTracks="tracks",
+    #         inputParticles="particles_selected",
+    #         inputTrackParticleMatching="track_particle_matching",
+    #         filePath=str(outputDir / "performance_kf.root"),
+    #     )
+    # )
+
+    return s
+
+if "__main__" == __name__:
+
+    import argparse
+
+    # p = argparse.ArgumentParser()
+    choices = ["pi", "p", "kaon"]
+    # p.add_argument("--ptcl", choices=choices)
+    # p.add_argument("--hypo", choices=choices)
+    # args = p.parse_args()
+
+    srcdir = Path(__file__).resolve().parent.parent.parent.parent
+
+    # ODD
+    from acts.examples.odd import getOpenDataDetector, getOpenDataDetectorDirectory
+
+    geoDir = getOpenDataDetectorDirectory()
+    actsDir = Path(__file__).parent.parent.parent.parent
+    # acts.examples.dump_args_calls(locals())  # show python binding calls
+
+    oddMaterialMap = geoDir / "data/odd-material-maps.root"
+
+    oddDigiConfig = actsDir / "Examples/Configs/odd-digi-smearing-config.json"
+
+    oddSeedingSel = actsDir / "Examples/Configs/odd-seeding-config.json"
+    oddMaterialDeco = acts.IMaterialDecorator.fromFile(oddMaterialMap)
+
+    detector = getOpenDataDetector(odd_dir=geoDir, materialDecorator=oddMaterialDeco)
+    trackingGeometry = detector.trackingGeometry()
+
+    ## GenericDetector
+    # detector = acts.examples.GenericDetector()
+    # trackingGeometry = detector.trackingGeometry()
+    # digiConfigFile = (
+    #     srcdir
+    #     / "Examples/Configs/generic-digi-smearing-config.json"
+    # )
+
+    field = acts.ConstantBField(acts.Vector3(0, 0, 2 * u.T))
+    s = acts.examples.Sequencer(events=10000, numThreads=-1, logLevel=acts.logging.INFO)
+
+    runTruthTrackingKalman(
+        trackingGeometry=trackingGeometry,
+        field=field,
+        digiConfigFile=oddDigiConfig,
+        outputDir=Path.cwd(),
+        s=s
+    ).run()
