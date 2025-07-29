@@ -38,7 +38,7 @@ def runTruthTrackingKalman(
     )
 
     s = s or acts.examples.Sequencer(
-        events=100, numThreads=-1, logLevel=acts.logging.INFO
+        events=10, numThreads=1, logLevel=acts.logging.INFO
     )
 
     for d in decorators:
@@ -48,12 +48,15 @@ def runTruthTrackingKalman(
     outputDir = Path(outputDir)
 
     logger = acts.logging.getLogger("Truth tracking example")
-    ptcl_truth = acts.PdgParticle.ePionMinus
+    ptcl_truth = [acts.PdgParticle.ePionMinus, 
+                  acts.PdgParticle.ePionPlus, acts.PdgParticle.eKaonMinus,
+                  acts.PdgParticle.eKaonPlus, acts.PdgParticle.eProton,
+                  acts.PdgParticle.eAntiProton]
         
     if inputParticlePath is None:
         addParticleGun(
             s,
-            ParticleConfig(num=1, pdg=ptcl_truth, randomizeCharge=True),
+            ParticleConfig(num=1, pdg=ptcl_truth),
             EtaConfig(-3.0, 3.0, uniform=True),
             MomentumConfig(1.0 * u.GeV, 1.0 * u.GeV, transverse=True),
             PhiConfig(0.0, 360.0 * u.degree),
@@ -71,10 +74,10 @@ def runTruthTrackingKalman(
             acts.examples.RootParticleReader(
                 level=acts.logging.INFO,
                 filePath=str(inputParticlePath.resolve()),
-                outputParticles=f"particles_generated_{truth}",
+                outputParticles="particles_generated",
             )
         )
-        s.addWhiteboardAlias("particles", f"particles_generated_{truth}")
+        s.addWhiteboardAlias("particles", "particles_generated")
 
     if inputHitsPath is None:
         addFatras(
@@ -104,19 +107,21 @@ def runTruthTrackingKalman(
     )
 
     addDigiParticleSelection(
-        s,
-        ParticleSelectorConfig(
-            pt=(0.9 * u.GeV, None),
-            measurements=(7, None),
-            removeNeutral=True,
-            removeSecondaries=True,
-        ),
-    )
+                s,
+                ParticleSelectorConfig(
+                    pt=(0.9 * u.GeV, None),
+                    measurements=(7, None),
+                    removeNeutral=True,
+                    removeSecondaries=True,
+                )
+            )
 
-    choices = ["kaon", "pi", "p"]
-
+    choices = [
+        "kaon", 
+        # "pi", 
+        # "p",
+    ]
     
-
     for particle in choices:
         if particle == "pi":
             hypo = acts.ParticleHypothesis.pion
@@ -126,7 +131,7 @@ def runTruthTrackingKalman(
             hypo = acts.ParticleHypothesis.kaon
         else:
             raise ValueError(f"Unknown hypothesis: {particle}")
-
+        
         
         addSeeding(
             s,
@@ -134,6 +139,7 @@ def runTruthTrackingKalman(
             field,
             rnd=rnd,
             inputParticles="particles_generated",
+            selectedParticles="particles_selected",
             seedingAlgorithm=SeedingAlgorithm.TruthSmeared,
             particleHypothesis=hypo,
             trackParameterSmearingOutputTrackParameters=f"output_track_parameter_{particle}",
@@ -174,16 +180,15 @@ def runTruthTrackingKalman(
         #         filePath=str(outputDir / "trackstates_kf.root"),
         #     )
         # )
-
         summary=f"tracksummary_kf_{particle}.root"
 
         s.addWriter(
             acts.examples.RootTrackSummaryWriter(
-                level=acts.logging.INFO,
-                inputTracks=f"tracks_{particle}",
-                inputParticles="particles_selected",
+                level=acts.logging.VERBOSE,
+                inputTrackContainers=[f"tracks_{particle}"],
                 inputTrackParticleMatching=f"track_particle_matching_{particle}",
-                filePath=str(outputDir / summary),
+                inputParticles="particles",
+                filePath=str(outputDir / summary)  
             )
         )
 
@@ -204,7 +209,7 @@ if "__main__" == __name__:
     import argparse
 
     # p = argparse.ArgumentParser()
-    choices = ["pi", "p", "kaon"]
+    #truths = ["pi", "p", "kaon"]
     # p.add_argument("--ptcl", choices=choices)
     # p.add_argument("--hypo", choices=choices)
     # args = p.parse_args()
@@ -237,7 +242,7 @@ if "__main__" == __name__:
     # )
 
     field = acts.ConstantBField(acts.Vector3(0, 0, 2 * u.T))
-    s = acts.examples.Sequencer(events=10000, numThreads=-1, logLevel=acts.logging.INFO)
+    s = acts.examples.Sequencer(events=10, numThreads=1, logLevel=acts.logging.INFO)
 
     runTruthTrackingKalman(
         trackingGeometry=trackingGeometry,

@@ -29,8 +29,8 @@ EtaConfig = namedtuple(
 PhiConfig = namedtuple("PhiConfig", ["min", "max"], defaults=[None, None])
 ParticleConfig = namedtuple(
     "ParticleConfig",
-    ["num", "pdg", "randomizeCharge", "charge", "mass"],
-    defaults=[None, None, None, None, None],
+    ["num", "pdg", "charge", "mass"],
+    defaults=[None, None, None, None],
 )
 ParticleSelectorConfig = namedtuple(
     "ParticleSelectorConfig",
@@ -169,7 +169,6 @@ def addParticleGun(
                         etaUniform=etaConfig.uniform,
                         numParticles=particleConfig.num,
                         pdg=particleConfig.pdg,
-                        randomizeCharge=particleConfig.randomizeCharge,
                         charge=particleConfig.charge,
                         mass=particleConfig.mass,
                         # Merging particle gun vertices does not make sense
@@ -823,6 +822,7 @@ def addDigiParticleSelection(
     s: acts.examples.Sequencer,
     config: ParticleSelectorConfig,
     logLevel: Optional[acts.logging.Level] = None,
+    particle: str = ""
 ) -> None:
     """
     This function steers the particle selection after digitization.
@@ -842,7 +842,7 @@ def addDigiParticleSelection(
         inputParticles="particles_simulated_selected",
         inputParticleMeasurementsMap="particle_measurements_map",
         inputMeasurements="measurements",
-        outputParticles="tmp_particles_digitized_selected",
+        outputParticles="particles_digitized_selected"
     )
     s.addAlgorithm(selector)
 

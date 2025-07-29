@@ -1284,6 +1284,7 @@ class KalmanFitter {
       track.parameters() = params.parameters();
       track.covariance() = params.covariance().value();
       track.setReferenceSurface(params.referenceSurface().getSharedPtr());
+      track.setParticleHypothesis(params.particleHypothesis());
     }
 
     calculateTrackQuantities(track);

@@ -27,17 +27,14 @@ using namespace Acts::UnitLiterals;
 namespace ActsExamples {
 
 ParametricParticleGenerator::ParametricParticleGenerator(const Config& cfg)
-    : m_cfg(cfg),
-      m_mass(cfg.mass.value_or(Acts::findMass(m_cfg.pdg).value_or(0))) {
-  m_pdgChoices = {
-      m_cfg.pdg,
-      static_cast<Acts::PdgParticle>(-m_cfg.pdg),
-  };
+    : m_cfg(cfg){
 
-  // choose between particle/anti-particle if requested
-  // the upper limit of the distribution is inclusive
-  m_particleTypeChoice = UniformIndex(0u, m_cfg.randomizeCharge ? 1u : 0u);
+  m_particleChoice = UniformIndex(0u, m_cfg.pdg.size() - 1);
   m_phiDist = UniformReal(m_cfg.phiMin, m_cfg.phiMax);
+
+  for (auto& pdg : m_cfg.pdg) {
+    m_masses.push_back(cfg.mass.value_or(Acts::findMass(pdg).value_or(0)));
+  }
 
   if (m_cfg.etaUniform) {
     double etaMin = Acts::AngleHelpers::etaFromTheta(m_cfg.thetaMin);
@@ -87,6 +84,7 @@ ParametricParticleGenerator::ParametricParticleGenerator(const Config& cfg)
 
 std::shared_ptr<HepMC3::GenEvent> ParametricParticleGenerator::operator()(
     RandomEngine& rng) {
+  std::cout << "ParticleGun GO" << std::endl;
   auto event = std::make_shared<HepMC3::GenEvent>();
 
   auto primaryVertex = std::make_shared<HepMC3::GenVertex>();
@@ -107,8 +105,9 @@ std::shared_ptr<HepMC3::GenEvent> ParametricParticleGenerator::operator()(
   // counter will be reused as barcode particle number which must be non-zero.
   for (std::size_t ip = 1; ip <= m_cfg.numParticles; ++ip) {
     // draw parameters
-    const unsigned int type = m_particleTypeChoice(rng);
-    const Acts::PdgParticle pdg = m_pdgChoices[type];
+    const size_t particleIndex = m_particleChoice(rng);  
+    const Acts::PdgParticle pdg = m_cfg.pdg.at(particleIndex);
+    const double mass = m_masses.at(particleIndex);
     const double phi = m_phiDist(rng);
     const double someP = m_somePDist(rng);
 
@@ -124,11 +123,13 @@ std::shared_ptr<HepMC3::GenEvent> ParametricParticleGenerator::operator()(
     auto particle = std::make_shared<HepMC3::GenParticle>();
     HepMC3::FourVector hepMcMomentum(momentum.x() / 1_GeV, momentum.y() / 1_GeV,
                                      momentum.z() / 1_GeV,
-                                     std::hypot(p, m_mass) / 1_GeV);
+                                     std::hypot(p, mass) / 1_GeV);
     particle->set_momentum(hepMcMomentum);
-    particle->set_generated_mass(m_mass);
+    particle->set_generated_mass(mass);
     particle->set_pid(pdg);
     particle->set_status(1);
+
+    std::cout<< pdg <<std::endl;
 
     event->add_particle(particle);
 

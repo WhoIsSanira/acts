@@ -1340,7 +1340,7 @@ def addSeedFilterML(
     from acts.examples.onnx import SeedFilterMLAlgorithm
 
     inputParticles = "particles"
-    selectedParticles = f"particles_selected_{particle}"
+    selectedParticles = "particles_selected"
     seeds = "seeds"
     estParams = f"estimatedparameters_{particle}"
     prototracks = "seed-prototracks-ML"
@@ -1681,7 +1681,7 @@ def addCKFTracks(
     matchAlg = acts.examples.TrackTruthMatcher(
         level=customLogLevel(),
         inputTracks=trackFinder.config.outputTracks,
-        inputParticles=f"particles_selected_{particle}",
+        inputParticles="particles_selected",
         inputMeasurementParticlesMap="measurement_particles_map",
         outputTrackParticleMatching="ckf_track_particle_matching",
         outputParticleTrackMatching="ckf_particle_track_matching",
@@ -1797,8 +1797,8 @@ def addTrackWriters(
         if writeSummary:
             trackSummaryWriter = acts.examples.RootTrackSummaryWriter(
                 level=customLogLevel(),
-                inputTracks=tracks,
-                inputParticles=f"particles_selected_{particle}",
+                inputTrackContainers=tracks,
+                inputParticles="particles_selected",
                 inputTrackParticleMatching=f"track_particle_matching_{particle}",
                 filePath=str(outputDirRoot / f"tracksummary_{name}.root"),
                 treeName="tracksummary",
@@ -1810,7 +1810,7 @@ def addTrackWriters(
             trackStatesWriter = acts.examples.RootTrackStatesWriter(
                 level=customLogLevel(),
                 inputTracks=tracks,
-                inputParticles=f"particles_selected_{particle}",
+                inputParticles="particles_selected",
                 inputTrackParticleMatching="track_particle_matching",
                 inputSimHits="simhits",
                 inputMeasurementSimHitsMap="measurement_simhits_map",
@@ -1823,7 +1823,7 @@ def addTrackWriters(
             trackFitterPerformanceWriter = acts.examples.TrackFitterPerformanceWriter(
                 level=customLogLevel(),
                 inputTracks=tracks,
-                inputParticles=f"particles_selected_{particle}",
+                inputParticles="particles_selected",
                 inputTrackParticleMatching="track_particle_matching",
                 filePath=str(outputDirRoot / f"performance_fitting_{name}.root"),
             )
@@ -1833,7 +1833,7 @@ def addTrackWriters(
             trackFinderPerfWriter = acts.examples.TrackFinderPerformanceWriter(
                 level=customLogLevel(),
                 inputTracks=tracks,
-                inputParticles=f"particles_selected_{particle}",
+                inputParticles="particles_selected",
                 inputTrackParticleMatching="track_particle_matching",
                 inputParticleTrackMatching="particle_track_matching",
                 inputParticleMeasurementsMap="particle_measurements_map",
@@ -2306,7 +2306,7 @@ def addVertexFitting(
 
     tracks = tracks if tracks is not None else ""
     inputParticles = "particles"
-    selectedParticles = f"particles_selected_{particle}"
+    selectedParticles = "particles_selected"
     inputTruthVertices = "vertices_truth"
 
     if vertexFinder == VertexFinder.Truth:
@@ -2403,7 +2403,7 @@ def addHoughVertexFinding(
     s.addAlgorithm(findHoughVertex)
 
     inputParticles = "particles"
-    selectedParticles = f"particles_selected_{particle}"
+    selectedParticles = "particles_selected"
     inputTruthVertices = "vertices_truth"
 
     if outputDirRoot is not None:

@@ -65,6 +65,7 @@ RootTrackSummaryWriter::RootTrackSummaryWriter(
   m_inputParticles.maybeInitialize(m_cfg.inputParticles);
   m_inputTrackParticleMatching.maybeInitialize(
       m_cfg.inputTrackParticleMatching);
+  
 
   for (const auto& name : m_cfg.inputTrackContainers) {
     if (name.empty()) {
@@ -234,6 +235,7 @@ ProcessCode RootTrackSummaryWriter::write(
     const AlgorithmContext& ctx,
     const TrackParticleMatching& trackParticleMatching,
     const SimParticleContainer& particles, const ConstTrackContainer& tracks) {
+  std::cout << "write() particle.size " << particles.size() << std::endl;
   for (const auto& track : tracks) {
     m_trackNr.push_back(track.index());
 
@@ -299,7 +301,7 @@ ProcessCode RootTrackSummaryWriter::write(
     float t_z0 = NaNfloat;
     float t_qop = NaNfloat;
     float t_prodR = NaNfloat;
-    unsigned int t_pdg = 0;
+    unsigned int t_pdg = -999;
 
     // Get the perigee surface
     const Acts::Surface* pSurface =
@@ -322,7 +324,7 @@ ProcessCode RootTrackSummaryWriter::write(
         foundMajorityParticle = true;
 
         const auto& particle = *ip;
-        ACTS_VERBOSE("Find the truth particle with barcode "
+        ACTS_VERBOSE("Found the truth particle with barcode "
                      << majorityParticleId << "="
                      << majorityParticleId.value());
         // Get the truth particle info at vertex
@@ -395,6 +397,8 @@ ProcessCode RootTrackSummaryWriter::write(
     m_t_z0.push_back(t_z0);
     m_t_prodR.push_back(t_prodR);
     m_t_pdg.push_back(t_pdg);
+
+    std::cout << "truth pdg" <<t_pdg << std::endl;
 
     // Initialize the fitted track parameters info
     std::array<float, Acts::eBoundSize> param = {NaNfloat, NaNfloat, NaNfloat,

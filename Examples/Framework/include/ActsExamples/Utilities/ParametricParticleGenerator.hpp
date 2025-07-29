@@ -72,7 +72,11 @@ class ParametricParticleGenerator : public ParticlesGenerator {
     /// Indicate if the momentum should be uniformly distributed in log space.
     bool pLogUniform = false;
     /// (Absolute) PDG particle number to identify the particle type.
-    Acts::PdgParticle pdg = Acts::PdgParticle::eMuon;
+    std::vector<Acts::PdgParticle> pdg = {
+      Acts::PdgParticle::ePionZero, Acts::PdgParticle::ePionMinus, Acts::PdgParticle::ePionPlus,
+      Acts::PdgParticle::eKaonMinus, Acts::PdgParticle::eKaonPlus,
+      Acts::PdgParticle::eProton, Acts::PdgParticle::eAntiProton
+    };
     /// Randomize the charge and flip the PDG particle number sign accordingly.
     bool randomizeCharge = false;
     /// Number of particles.
@@ -96,12 +100,13 @@ class ParametricParticleGenerator : public ParticlesGenerator {
   Config m_cfg;
 
   // will be automatically set from PDG data tables
-  double m_mass{};
+  std::vector<double> m_masses{};
 
   // (anti-)particle choice is one random draw but defines two properties
   std::array<Acts::PdgParticle, 2> m_pdgChoices{};
 
   UniformIndex m_particleTypeChoice;
+  UniformIndex m_particleChoice;
   UniformReal m_phiDist;
   std::function<std::pair<double, double>(RandomEngine& rng)> m_sinCosThetaDist;
   std::function<double(RandomEngine& rng)> m_somePDist;
