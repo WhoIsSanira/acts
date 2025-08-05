@@ -821,8 +821,7 @@ def addDigitization(
 def addDigiParticleSelection(
     s: acts.examples.Sequencer,
     config: ParticleSelectorConfig,
-    logLevel: Optional[acts.logging.Level] = None,
-    particle: str = ""
+    logLevel: Optional[acts.logging.Level] = None
 ) -> None:
     """
     This function steers the particle selection after digitization.

@@ -38,7 +38,7 @@ def runTruthTrackingKalman(
     )
 
     s = s or acts.examples.Sequencer(
-        events=10, numThreads=1, logLevel=acts.logging.INFO
+        events=10, numThreads=-1, logLevel=acts.logging.INFO
     )
 
     for d in decorators:
@@ -118,8 +118,8 @@ def runTruthTrackingKalman(
 
     choices = [
         "kaon", 
-        # "pi", 
-        # "p",
+        "pi", 
+        "p",
     ]
     
     for particle in choices:
@@ -180,17 +180,19 @@ def runTruthTrackingKalman(
         #         filePath=str(outputDir / "trackstates_kf.root"),
         #     )
         # )
-        summary=f"tracksummary_kf_{particle}.root"
+    summary="tracksummary_kf_all.root"
 
-        s.addWriter(
-            acts.examples.RootTrackSummaryWriter(
-                level=acts.logging.VERBOSE,
-                inputTrackContainers=[f"tracks_{particle}"],
-                inputTrackParticleMatching=f"track_particle_matching_{particle}",
-                inputParticles="particles",
-                filePath=str(outputDir / summary)  
-            )
+    s.addWriter(
+        acts.examples.RootTrackSummaryWriter(
+            level=acts.logging.INFO,
+            inputTrackContainers=["tracks_kaon", "tracks_pi", "tracks_p"],
+            inputTrackParticleMatching=["track_particle_matching_kaon", 
+                                        "track_particle_matching_pi", 
+                                        "track_particle_matching_p"],
+            inputParticles="particles",
+            filePath=str(outputDir / summary)  
         )
+    )
 
     # s.addWriter(
     #     acts.examples.TrackFitterPerformanceWriter(
@@ -242,7 +244,7 @@ if "__main__" == __name__:
     # )
 
     field = acts.ConstantBField(acts.Vector3(0, 0, 2 * u.T))
-    s = acts.examples.Sequencer(events=10, numThreads=1, logLevel=acts.logging.INFO)
+    s = acts.examples.Sequencer(events=10000, numThreads=-1, logLevel=acts.logging.INFO)
 
     runTruthTrackingKalman(
         trackingGeometry=trackingGeometry,

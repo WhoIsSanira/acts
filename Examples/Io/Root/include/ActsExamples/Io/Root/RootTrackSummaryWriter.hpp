@@ -51,7 +51,7 @@ class RootTrackSummaryWriter final : public IWriter {
     /// Input particles collection (optional).
     std::string inputParticles;
     /// Input track-particle matching (optional).
-    std::string inputTrackParticleMatching;
+    std::vector<std::string> inputTrackParticleMatching;
     /// Output filename.
     std::string filePath = "tracksummary.root";
     /// Name of the output tree.
@@ -98,11 +98,11 @@ class RootTrackSummaryWriter final : public IWriter {
   const Acts::Logger& logger() const { return *m_logger; }
 
   ReadDataHandle<SimParticleContainer> m_inputParticles{this, "InputParticles"};
-  ReadDataHandle<TrackParticleMatching> m_inputTrackParticleMatching{
-      this, "InputTrackParticleMatching"};
 
   std::vector<std::unique_ptr<ReadDataHandle<ConstTrackContainer>>>
       m_inputTrackContainers{};
+  std::vector<std::unique_ptr<ReadDataHandle<TrackParticleMatching>>>
+      m_inputTrackParticleMatching{};
 
   /// Mutex used to protect multi-threaded writes
   std::mutex m_writeMutex;
@@ -181,7 +181,7 @@ class RootTrackSummaryWriter final : public IWriter {
   std::vector<float> m_t_z0;
   /// Production radius of majority particle
   std::vector<float> m_t_prodR;
-  std::vector<unsigned int> m_t_pdg;
+  std::vector<int> m_t_pdg;
 
   /// If the track has fitted parameter
   std::vector<bool> m_hasFittedParams;

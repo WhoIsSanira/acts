@@ -169,9 +169,6 @@ ActsExamples::ProcessCode ActsExamples::TrackFittingAlgorithm::execute(
       std::make_shared<Acts::ConstVectorMultiTrajectory>(
           std::move(*trackStateContainer))};
 
-  // for (const auto& track : constTracks){
-  //   std::cout <<track.particleHypothesis()<< std::endl;
-  // }
   m_outputTracks(ctx, std::move(constTracks));
   return ActsExamples::ProcessCode::SUCCESS;
 }

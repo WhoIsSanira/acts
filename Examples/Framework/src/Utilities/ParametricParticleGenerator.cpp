@@ -84,7 +84,6 @@ ParametricParticleGenerator::ParametricParticleGenerator(const Config& cfg)
 
 std::shared_ptr<HepMC3::GenEvent> ParametricParticleGenerator::operator()(
     RandomEngine& rng) {
-  std::cout << "ParticleGun GO" << std::endl;
   auto event = std::make_shared<HepMC3::GenEvent>();
 
   auto primaryVertex = std::make_shared<HepMC3::GenVertex>();
@@ -129,7 +128,6 @@ std::shared_ptr<HepMC3::GenEvent> ParametricParticleGenerator::operator()(
     particle->set_pid(pdg);
     particle->set_status(1);
 
-    std::cout<< pdg <<std::endl;
 
     event->add_particle(particle);
 

@@ -374,11 +374,7 @@ void HepMC3InputConverter::convertHepMC3ToInternalEdm(
                               verticesUnordered.end()};
 
 
-  std::cout << "HepMC3 -> SimParticle" << std::endl;
-  for(const auto& particle: particles) {
-    std::cout << "pdg id: " << particle.pdg() << std::endl; 
-  }
-
+  
   // move generated event to the store
   m_outputParticles(ctx, std::move(particles));
   m_outputVertices(ctx, std::move(vertices));
